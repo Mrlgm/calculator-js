@@ -1,4 +1,4 @@
-const addition = "12*34+56*10";
+const addition = "(12+34)*56";
 
 const isDigit = (char) => {
   return /[0-9]/.test(char);
@@ -14,7 +14,7 @@ function tokenizer(code) {
     char = code[current];
     if (isDigit(char)) {
       tokenText += char;
-    } else {
+    } else if (tokenText) {
       tokens.push({
         type: "number",
         value: tokenText,
@@ -36,8 +36,23 @@ function tokenizer(code) {
       });
     }
 
+    if (char === "(") {
+      tokens.push({
+        type: "symbol",
+        value: char,
+      });
+    }
+
+    if (char === ")") {
+      tokens.push({
+        type: "symbol",
+        value: char,
+      });
+    }
+
     current++;
   }
+
   return tokens;
 }
 
@@ -57,11 +72,17 @@ class AstNode {
 }
 
 function parse(tokens) {
+  return additive(tokens);
+}
+
+function additive(tokens) {
   let child1 = multiplicate(tokens);
   let node = child1;
+
   while (true) {
-    let token = tokens.shift();
+    let token = tokens[0];
     if (token && token.type === "symbol" && token.value === "+") {
+      tokens.shift();
       node = new AstNode("add", token.value);
       let child2 = multiplicate(tokens);
       node.addChild(child1);
@@ -75,23 +96,35 @@ function parse(tokens) {
 }
 
 function multiplicate(tokens) {
+  let child1 = primary(tokens);
+  let node = child1;
   let token = tokens[0];
-  let node = null;
 
-  if (token.type === "number") {
+  if (token && token.type === "symbol" && token.value === "*") {
     tokens.shift();
-    let child1 = new AstNode(token.type, token.value);
-    node = child1;
-    token = tokens[0];
-    if (token && token.type === "symbol" && token.value === "*") {
-      tokens.shift();
-      node = new AstNode("star", token.value);
-      let child2 = multiplicate(tokens);
-      node.addChild(child1);
-      node.addChild(child2);
-    }
+    node = new AstNode("star", token.value);
+    let child2 = multiplicate(tokens);
+    node.addChild(child1);
+    node.addChild(child2);
   }
 
+  return node;
+}
+
+function primary(tokens) {
+  let token = tokens[0];
+  let node = null;
+  if (token.type === "number") {
+    tokens.shift();
+    node = new AstNode(token.type, token.value);
+  } else if (token.type === "symbol" && token.value === "(") {
+    tokens.shift();
+    node = additive(tokens);
+    token = tokens[0];
+    if (token.type === "symbol" && token.value === ")") {
+      tokens.shift();
+    }
+  }
   return node;
 }
 
@@ -126,8 +159,9 @@ function evaluate(astNode) {
 }
 
 const tokens = tokenizer(addition);
-console.log(tokens);
+// console.log(tokens);
 const ast = parse(tokens);
-console.log(ast);
+// console.log(ast);
 const result = evaluate(ast);
+console.log(addition);
 console.log(result);
